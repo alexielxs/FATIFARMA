@@ -16,7 +16,8 @@ public class Producto {
     private String unidadInventario;
     private String unidadStock;
     private Integer stockMinimo;
-    private boolean fiscalizadoDigemid; // <-- NUEVO: true si requiere receta retenida y control especial
-    private String registroSanitario;   // <-- NUEVO: Código oficial otorgado por DIGEMID (Ej: NG-1234)
+    private boolean fiscalizadoDigemid; // true si requiere receta retenida y control especial
+    private String registroSanitario;   // Código oficial otorgado por DIGEMID (Ej: NG-1234)
+    private String codigoMedicamento;   // <-- NUEVO: Código de catálogo oficial (Ej: 010400091)
 }
 

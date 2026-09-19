@@ -22,7 +22,7 @@ public class MySQLInventarioAdapter implements InventarioOutputPort {
 
     @Override
     public Lote guardarLote(Lote lote) {
-        // 1. Convertimos el Modelo de Dominio de Producto a Entidad JPA incluyendo campos DIGEMID
+        // 1. Convertimos el Modelo de Dominio de Producto a Entidad JPA incluyendo campos DIGEMID e institucionales
         ProductoEntity productoEntity = ProductoEntity.builder()
                 .id(lote.getProducto().getId())
                 .nombre(lote.getProducto().getNombre())
@@ -32,8 +32,9 @@ public class MySQLInventarioAdapter implements InventarioOutputPort {
                 .unidadInventario(lote.getProducto().getUnidadInventario())
                 .unidadStock(lote.getProducto().getUnidadStock())
                 .stockMinimo(lote.getProducto().getStockMinimo())
-                .fiscalizadoDigemid(lote.getProducto().isFiscalizadoDigemid()) // <-- NUEVO: Control DIGEMID
-                .registroSanitario(lote.getProducto().getRegistroSanitario())   // <-- NUEVO: Registro Sanitario
+                .fiscalizadoDigemid(lote.getProducto().isFiscalizadoDigemid())
+                .registroSanitario(lote.getProducto().getRegistroSanitario())
+                .codigoMedicamento(lote.getProducto().getCodigoMedicamento()) // <-- NUEVO: Guarda el código institucional (Ej: 010400091)
                 .build();
 
         // 2. Convertimos el Modelo de Dominio de Lote a Entidad JPA
@@ -80,7 +81,7 @@ public class MySQLInventarioAdapter implements InventarioOutputPort {
 
     // Método auxiliar reutilizable para convertir de Entidad JPA hacia Dominio Puro
     private Lote mapearAFormatoDominio(LoteEntity entity) {
-        // ACTUALIZADO: Construimos el objeto Producto con sus 10 parámetros correspondientes
+        // ACTUALIZADO: Construimos el objeto Producto con sus 11 parámetros correspondientes
         Producto productoDominio = new Producto(
                 entity.getProducto().getId(),
                 entity.getProducto().getNombre(),
@@ -90,8 +91,9 @@ public class MySQLInventarioAdapter implements InventarioOutputPort {
                 entity.getProducto().getUnidadInventario(),
                 entity.getProducto().getUnidadStock(),
                 entity.getProducto().getStockMinimo(),
-                entity.getProducto().isFiscalizadoDigemid(), // <-- NUEVO: Mapeo DIGEMID
-                entity.getProducto().getRegistroSanitario()   // <-- NUEVO: Mapeo Registro Sanitario
+                entity.getProducto().isFiscalizadoDigemid(),
+                entity.getProducto().getRegistroSanitario(),
+                entity.getProducto().getCodigoMedicamento() // <-- NUEVO: Recupera el código institucional desde MySQL
         );
 
         return new Lote(

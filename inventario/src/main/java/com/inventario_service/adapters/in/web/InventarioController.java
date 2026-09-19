@@ -28,7 +28,7 @@ public class InventarioController {
     @PostMapping("/ingresar-lote")
     public ResponseEntity<?> ingresarLote(
             @RequestBody Map<String, Object> request,
-            @AuthenticationPrincipal String emailAutenticado) { // <-- NUEVO: Captura el usuario del Token JWT
+            @AuthenticationPrincipal String emailAutenticado) {
         try {
             // Si realizas pruebas locales sin token, asignamos un usuario genérico para evitar errores nulos
             String usuarioResponsable = (emailAutenticado != null) ? emailAutenticado : "anonimo@fatifarma.com";
@@ -44,8 +44,9 @@ public class InventarioController {
                     (String) prodMap.get("unidadInventario"),
                     (String) prodMap.get("unidadStock"),
                     (Integer) prodMap.get("stockMinimo"),
-                    (Boolean) prodMap.get("fiscalizadoDigemid"), // <-- NUEVO: Recibe true/false
-                    (String) prodMap.get("registroSanitario")    // <-- NUEVO: Recibe el código de registro
+                    (Boolean) prodMap.get("fiscalizadoDigemid"),
+                    (String) prodMap.get("registroSanitario"),
+                    (String) prodMap.get("codigoMedicamento") // <-- NUEVO: Recibe el código de catálogo institucional (Ej: 010400091)
             );
 
             // Construir el Lote con los 8 parámetros en el orden exacto de tu dominio
@@ -57,7 +58,7 @@ public class InventarioController {
                     LocalDate.parse((String) request.get("fechaVencimiento")),
                     Sucursal.valueOf(((String) request.get("sucursal")).toUpperCase().trim()),
                     producto,
-                    usuarioResponsable // <-- NUEVO: Guardamos quién hizo la operación
+                    usuarioResponsable
             );
 
             Lote guardado = inventarioUseCase.registrarIngresoLote(lote);

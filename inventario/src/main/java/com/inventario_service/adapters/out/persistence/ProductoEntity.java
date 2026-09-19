@@ -36,8 +36,11 @@ public class ProductoEntity {
     private Integer stockMinimo;
 
     @Column(name = "fiscalizado_digemid", nullable = false)
-    private boolean fiscalizadoDigemid; // <-- NUEVO EN BASE DE DATOS
+    private boolean fiscalizadoDigemid;
 
     @Column(name = "registro_sanitario")
-    private String registroSanitario;   // <-- NUEVO EN BASE DE DATOS
+    private String registroSanitario;
+
+    @Column(name = "codigo_medicamento")
+    private String codigoMedicamento; // <-- NUEVO EN BASE DE DATOS: Código de catálogo de la receta (Ej: 010400091)
 }
