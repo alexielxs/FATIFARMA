@@ -24,15 +24,15 @@ public class SecurityConfig {
                         // 1. RUTAS PÚBLICAS: Cualquiera puede loguearse o registrarse
                         .requestMatchers("/api/auth/login", "/api/auth/registrar").permitAll()
 
-                        // 2. MÓDULO DE INVENTARIO (Rutas de ejemplo para cuando crees el microservicio de Inventario)
+                        // 2. MÓDULO DE INVENTARIO 
                         .requestMatchers("/api/inventario/consultar/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO", "TECNICA")
                         .requestMatchers("/api/inventario/modificar/**", "/api/inventario/lotes/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO")
 
-                        // 3. MÓDULO DE VENTAS (Rutas de ejemplo para el microservicio de Ventas)
+                        // 3. MÓDULO DE VENTAS 
                         .requestMatchers("/api/ventas/crear/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO", "TECNICA")
                         .requestMatchers("/api/ventas/auditar/**").hasRole("PROPIETARIO")
 
-                        // 4. MÓDULO DE REPORTES (Rutas de ejemplo para el microservicio de Reportes)
+                        // 4. MÓDULO DE REPORTES 
                         .requestMatchers("/api/reportes/financieros/**").hasRole("PROPIETARIO")
                         .requestMatchers("/api/reportes/diarios/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO")
 
