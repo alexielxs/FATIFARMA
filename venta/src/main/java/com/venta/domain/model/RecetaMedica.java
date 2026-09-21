@@ -1,10 +1,11 @@
 package com.venta.domain.model;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime; // <-- NUEVO IMPORT
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,4 +18,5 @@ public class RecetaMedica {
     private LocalDate fechaVigencia;
     private String dniCliente;
     private String imagenBase64;
+    private LocalDateTime fechaRegistroSistema; // <-- NUEVO: Registra la hora exacta en que se sube el PDF/Foto
 }

@@ -1,17 +1,19 @@
 package com.farmacia.seguridad.adapters.out.security;
 
-import com.farmacia.seguridad.domain.model.Usuario;
+import com.farmacia.seguridad.domain.model.Usuario; // <-- SOLUCIONADO: Importación obligatoria del modelo de dominio
 import com.farmacia.seguridad.ports.out.TokenOutputPort;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 
 @Component
-public class JwtTokenAdapter implements TokenOutputPort{
+public class JwtTokenAdapter implements TokenOutputPort {
+
     private static final String SECRET_KEY_STRING = "ClaveSecretaSuperFuerteYSeguraParaLaFarmacia2026!";
     private static final long EXPIRATION_TIME = 86400000; // 24 horas en milisegundos
 
@@ -21,8 +23,9 @@ public class JwtTokenAdapter implements TokenOutputPort{
 
     @Override
     public String generarToken(Usuario usuario) {
+        // CORREGIDO: Se cambia .name() por .getNombreRol() porque Rol ahora es una clase pura del diagrama relacional
         Map<String, Object> extraClaims = Map.of(
-                "rol", usuario.getRol().name(),
+                "rol", usuario.getRol() != null ? usuario.getRol().getNombreRol() : "TECNICA",
                 "id_usuario", usuario.getId()
         );
 

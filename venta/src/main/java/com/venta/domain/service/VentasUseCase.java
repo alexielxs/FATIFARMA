@@ -52,9 +52,11 @@ public class VentasUseCase implements VentasInputPort {
             subtotalAcumulado += (precio * detalle.getCantidad());
         }
 
-        // 2. DIFERENCIACIÓN AUTOMÁTICA: Asignar el tipo regulatorio de la venta
+        // =========================================================================
+        // CLASIFICACIÓN LOGICA OBLIGATORIA INMUTABLE: CON_RECETA y NORMAL
+        // =========================================================================
         if (requiereControlDigemid) {
-            venta.setTipoVenta("CON_RECETA");
+            venta.setTipoVenta("CON_RECETA"); // <-- OBLIGATORIO: No se modifica
             // Si suben la receta de inmediato en caja, validamos que esté vigente
             if (venta.getReceta() != null && venta.getReceta().getNumeroReceta() != null) {
                 if (venta.getReceta().getFechaVigencia().isBefore(LocalDate.now())) {
@@ -62,12 +64,12 @@ public class VentasUseCase implements VentasInputPort {
                 }
             }
         } else {
-            venta.setTipoVenta("NORMAL");
+            venta.setTipoVenta("NORMAL"); // <-- OBLIGATORIO: No se modifica
         }
 
-        // 3. Descontar las existencias físicas en el inventario vía OpenFeign
+        // 3. Descontar las existencias físicas en el inventario llamando al puerto de red OpenFeign
         for (DetalleVenta detalle : venta.getDetalles()) {
-            inventarioClientPort.descontarStock(detalle.getLoteId(), detalle.getCantidad());
+            inventarioClientPort.descontarStockFisico(detalle.getLoteId(), detalle.getCantidad());
         }
 
         venta.setFechaVenta(LocalDateTime.now());
@@ -78,7 +80,6 @@ public class VentasUseCase implements VentasInputPort {
 
     @Override
     public Venta adjuntarRecetaAVentaRealizada(Long idVenta, RecetaMedica receta) {
-        // Buscamos la venta usando el puerto de salida, si no arroja un error controlado
         Venta ventaExistente = ventasOutputPort.buscarPorId(idVenta)
                 .orElseThrow(() -> new RuntimeException("Error: La boleta con ID " + idVenta + " no existe."));
 
@@ -90,9 +91,16 @@ public class VentasUseCase implements VentasInputPort {
             throw new RuntimeException("Error Sanitario: La receta fotocopiada ya estaba vencida el día de la venta.");
         }
 
+        // =====================================================================
+        // CANDADO DE AUDITORÍA Y TRAZABILIDAD:
+        // La fecha original de la venta comercial se mantiene intacta.
+        // Se inyecta la hora actual del servidor al momento preciso de subir el archivo.
+        // =====================================================================
+        receta.setFechaRegistroSistema(LocalDateTime.now());
+
         // Se le inyecta la receta fotocopiada y cambia formalmente de estado ante DIGEMID
         ventaExistente.setReceta(receta);
-        ventaExistente.setTipoVenta("CON_RECETA");
+        ventaExistente.setTipoVenta("CON_RECETA"); // <-- OBLIGATORIO: Forzado por auditoría regulatoria
 
         return ventasOutputPort.guardarVenta(ventaExistente);
     }

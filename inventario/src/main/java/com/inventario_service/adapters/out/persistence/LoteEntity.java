@@ -1,8 +1,11 @@
 package com.inventario_service.adapters.out.persistence;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "lotes")
@@ -11,10 +14,17 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class LoteEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "producto_id", nullable = false)
+    private ProductoEntity producto;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sucursal_id", nullable = false)
+    private SucursalEntity sucursal;
 
     @Column(name = "codigo_lote", nullable = false)
     private String codigoLote;
@@ -26,17 +36,11 @@ public class LoteEntity {
     private Double precioVenta;
 
     @Column(name = "fecha_vencimiento", nullable = false)
-    private LocalDate fechaVencimiento;
+    private LocalDate javaFechaVencimiento;
 
-    @Column(nullable = false)
-    private String sucursal; // Guardado como String (SUCURSAL_PRINCIPAL, SUCURSAL_SECUNDARIA)
+    @Column(name = "ubicacion_anaquel")
+    private String ubicacionAnaquel;
 
     @Column(name = "usuario_registro", nullable = false)
-    private String usuarioRegistro; // <-- NUEVO: Columna para la auditoría de registro
-
-    // RELACIÓN: Muchos lotes pueden pertenecer al mismo producto
-    @ManyToOne(cascade = CascadeType.PERSIST) // Si el producto no existe en el catálogo, lo crea automáticamente
-    @JoinColumn(name = "producto_id", nullable = false)
-    private ProductoEntity producto;
+    private String usuarioRegistro;
 }
-

@@ -9,43 +9,50 @@ import java.util.Optional;
 @Component
 public class MySQLUsuarioAdapter implements UsuarioOutPutPort {
 
-    private final SpringDataUsuarioRepository repository;
+    private final SpringDataUsuarioRepository usuarioRepository;
+    private final SpringDataRolRepository rolRepository;
 
-    public MySQLUsuarioAdapter(SpringDataUsuarioRepository repository) {
-        this.repository = repository;
+    public MySQLUsuarioAdapter(SpringDataUsuarioRepository usuarioRepository, SpringDataRolRepository rolRepository) {
+        this.usuarioRepository = usuarioRepository;
+        this.rolRepository = rolRepository;
     }
 
     @Override
-    public Usuario guardar(Usuario usuario) {
-        // 1. Convertimos el objeto del Dominio a una Entidad de MySQL asegurando el formato estándar texto
+    public Usuario guardarUsuario(Usuario usuario) {
+        RolEntity rolEntity = rolRepository.findByNombreRol(usuario.getRol().getNombreRol())
+                .orElseThrow(() -> new RuntimeException("Error: El rol relacional no existe en MySQL."));
+
         UsuarioEntity entity = UsuarioEntity.builder()
+                .id(usuario.getId())
                 .nombre(usuario.getNombre())
                 .email(usuario.getEmail())
                 .password(usuario.getPassword())
-                .rol(usuario.getRol().name().toUpperCase()) // Guardamos siempre en mayúsculas en la BD
+                .rol(rolEntity)
                 .build();
 
-        UsuarioEntity guardado = repository.save(entity);
-
-        // 2. Retornamos el objeto convertido de nuevo a Dominio respetando el orden de 5 campos
-        return new Usuario(
-                guardado.getId(),
-                guardado.getNombre(),
-                guardado.getEmail(),
-                guardado.getPassword(),
-                Rol.valueOf(guardado.getRol().toUpperCase().trim()) // Protección contra inconsistencias de texto
-        );
+        UsuarioEntity guardado = usuarioRepository.save(entity);
+        return mapearADominio(guardado);
     }
 
     @Override
     public Optional<Usuario> buscarPorEmail(String email) {
-        return repository.findByEmail(email)
-                .map(entity -> new Usuario(
-                        entity.getId(),
-                        entity.getNombre(),
-                        entity.getEmail(),
-                        entity.getPassword(),
-                        Rol.valueOf(entity.getRol().toUpperCase().trim()) // Protección contra inconsistencias de texto
-                ));
+        return usuarioRepository.findByEmail(email).map(this::mapearADominio);
+    }
+
+    @Override
+    public Optional<Rol> buscarRolPorNombre(String nombreRol) {
+        return rolRepository.findByNombreRol(nombreRol)
+                .map(entity -> new Rol(entity.getId(), entity.getNombreRol()));
+    }
+
+    private Usuario mapearADominio(UsuarioEntity entity) {
+        Rol rolDominio = new Rol(entity.getRol().getId(), entity.getRol().getNombreRol());
+        return Usuario.builder()
+                .id(entity.getId())
+                .nombre(entity.getNombre())
+                .email(entity.getEmail())
+                .password(entity.getPassword())
+                .rol(rolDominio)
+                .build();
     }
 }

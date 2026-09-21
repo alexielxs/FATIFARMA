@@ -1,23 +1,25 @@
 package com.inventario_service.domain.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Producto {
     private Long id;
+    private Categoria categoria; // <-- Objeto Categoria puro del dominio
     private String nombre;
-    private Categoria categoria;
     private String formaFarmaceutica;
     private String presentacion;
     private String unidadInventario;
     private String unidadStock;
     private Integer stockMinimo;
-    private boolean fiscalizadoDigemid; // true si requiere receta retenida y control especial
-    private String registroSanitario;   // Código oficial otorgado por DIGEMID (Ej: NG-1234)
-    private String codigoMedicamento;   // <-- NUEVO: Código de catálogo oficial (Ej: 010400091)
+    private boolean fiscalizadoDigemid;
+    private String registroSanitario;
+    private String codigoMedicamento;
 }
 

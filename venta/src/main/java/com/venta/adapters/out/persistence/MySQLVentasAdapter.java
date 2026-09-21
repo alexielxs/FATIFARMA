@@ -23,6 +23,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
     public Venta guardarVenta(Venta venta) {
         RecetaMedicaEmbeddable recetaEmbeddable = null;
         if (venta.getReceta() != null) {
+            // CORREGIDO: Mapea de forma física la nueva fecha de auditoría del sistema hacia Hibernate
             recetaEmbeddable = RecetaMedicaEmbeddable.builder()
                     .numeroReceta(venta.getReceta().getNumeroReceta())
                     .medicoNombre(venta.getReceta().getMedicoNombre())
@@ -32,6 +33,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                     .fechaVigencia(venta.getReceta().getFechaVigencia())
                     .dniCliente(venta.getReceta().getDniCliente())
                     .imagenBase64(venta.getReceta().getImagenBase64())
+                    .fechaRegistroSistema(venta.getReceta().getFechaRegistroSistema()) // <-- ASIGNACIÓN DE AUDITORÍA
                     .build();
         }
 
@@ -42,7 +44,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                 .total(venta.getTotal())
                 .usuarioResponsable(venta.getUsuarioResponsable())
                 .sucursal(venta.getSucursal())
-                .metodoPago(venta.getMetodoPago()) // <-- NUEVO: Guarda el método de pago en MySQL
+                .metodoPago(venta.getMetodoPago())
                 .receta(recetaEmbeddable)
                 .build();
 
@@ -70,6 +72,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
     private Venta mapearADominio(VentaEntity entity) {
         RecetaMedica recetaDominio = null;
         if (entity.getReceta() != null) {
+            // CORREGIDO: Se añade el noveno parámetro al constructor para jalar la fecha de auditoría de la BD
             recetaDominio = new RecetaMedica(
                     entity.getReceta().getNumeroReceta(),
                     entity.getReceta().getMedicoNombre(),
@@ -78,7 +81,8 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                     entity.getReceta().getFechaEmision(),
                     entity.getReceta().getFechaVigencia(),
                     entity.getReceta().getDniCliente(),
-                    entity.getReceta().getImagenBase64()
+                    entity.getReceta().getImagenBase64(),
+                    entity.getReceta().getFechaRegistroSistema() // <-- RECUPERACIÓN DE AUDITORÍA INMUTABLE
             );
         }
 
@@ -86,7 +90,6 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                 .map(d -> new DetalleVenta(d.getId(), d.getLoteId(), d.getProductoNombre(), d.getCantidad(), d.getPrecioUnitario()))
                 .collect(Collectors.toList());
 
-        // CORREGIDO: Constructor con los 9 parámetros en el orden exacto de tu modelo de dominio puro
         return new Venta(
                 entity.getId(),
                 entity.getTipoVenta(),
@@ -94,7 +97,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                 entity.getTotal(),
                 entity.getUsuarioResponsable(),
                 entity.getSucursal(),
-                entity.getMetodoPago(), // <-- NUEVO: Extrae el método de pago de la base de datos
+                entity.getMetodoPago(),
                 detallesDominio,
                 recetaDominio
         );

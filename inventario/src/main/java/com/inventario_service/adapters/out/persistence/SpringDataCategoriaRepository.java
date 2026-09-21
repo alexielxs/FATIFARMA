@@ -1,0 +1,10 @@
+package com.inventario_service.adapters.out.persistence;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface SpringDataCategoriaRepository extends JpaRepository<CategoriaEntity, Long> {
+    Optional<CategoriaEntity> findByNombreCategoria(String nombreCategoria);
+}

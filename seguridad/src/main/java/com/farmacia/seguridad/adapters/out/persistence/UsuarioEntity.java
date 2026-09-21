@@ -2,10 +2,12 @@ package com.farmacia.seguridad.adapters.out.persistence;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table
+@Table(name = "usuarios")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,12 +20,13 @@ public class UsuarioEntity {
     @Column(nullable = false)
     private String nombre;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    private String rol;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "rol_id", nullable = false)
+    private RolEntity rol;
 }

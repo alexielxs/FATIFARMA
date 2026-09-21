@@ -1,8 +1,13 @@
 package com.farmacia.seguridad.domain.model;
 
-public enum Rol {
-    PROPIETARIO,
-    FARMACEUTICO,
-    TECNICO
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Rol {
+    private Long id;
+    private String nombreRol; // "PROPIETARIO", "FARMACEUTICO", "TECNICA"
 }

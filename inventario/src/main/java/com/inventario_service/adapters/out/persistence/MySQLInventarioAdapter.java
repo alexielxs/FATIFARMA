@@ -15,18 +15,34 @@ import java.util.stream.Collectors;
 public class MySQLInventarioAdapter implements InventarioOutputPort {
 
     private final SpringDataInventarioRepository repository;
+    private final SpringDataProductoRepository productoRepository;
+    private final SpringDataCategoriaRepository categoriaRepository;
+    private final SpringDataSucursalRepository sucursalRepository;
 
-    public MySQLInventarioAdapter(SpringDataInventarioRepository repository) {
+    public MySQLInventarioAdapter(SpringDataInventarioRepository repository,
+                                  SpringDataProductoRepository productoRepository,
+                                  SpringDataCategoriaRepository categoriaRepository,
+                                  SpringDataSucursalRepository sucursalRepository) {
         this.repository = repository;
+        this.productoRepository = productoRepository;
+        this.categoriaRepository = categoriaRepository;
+        this.sucursalRepository = sucursalRepository;
     }
 
     @Override
     public Lote guardarLote(Lote lote) {
-        // 1. Convertimos el Modelo de Dominio de Producto a Entidad JPA incluyendo campos DIGEMID e institucionales
+        String nombreCatInput = lote.getProducto().getCategoria() != null ? lote.getProducto().getCategoria().getNombreCategoria() : "MEDICAMENTOS";
+        CategoriaEntity categoriaEntity = categoriaRepository.findByNombreCategoria(nombreCatInput.toUpperCase().trim())
+                .orElseThrow(() -> new RuntimeException("La categoría '" + nombreCatInput + "' no existe en MySQL."));
+
+        String nombreSucursalInput = lote.getSucursal() != null ? lote.getSucursal().getNombreSucursal() : "FATIFARMA_ATE_CENTRAL";
+        SucursalEntity sucursalEntity = sucursalRepository.findByNombreSucursal(nombreSucursalInput.toUpperCase().trim())
+                .orElseThrow(() -> new RuntimeException("La sucursal '" + nombreSucursalInput + "' no existe en MySQL."));
+
         ProductoEntity productoEntity = ProductoEntity.builder()
                 .id(lote.getProducto().getId())
                 .nombre(lote.getProducto().getNombre())
-                .categoria(lote.getProducto().getCategoria().name())
+                .categoria(categoriaEntity)
                 .formaFarmaceutica(lote.getProducto().getFormaFarmaceutica())
                 .presentacion(lote.getProducto().getPresentacion())
                 .unidadInventario(lote.getProducto().getUnidadInventario())
@@ -34,76 +50,83 @@ public class MySQLInventarioAdapter implements InventarioOutputPort {
                 .stockMinimo(lote.getProducto().getStockMinimo())
                 .fiscalizadoDigemid(lote.getProducto().isFiscalizadoDigemid())
                 .registroSanitario(lote.getProducto().getRegistroSanitario())
-                .codigoMedicamento(lote.getProducto().getCodigoMedicamento()) // <-- NUEVO: Guarda el código institucional (Ej: 010400091)
+                .codigoMedicamento(lote.getProducto().getCodigoMedicamento())
                 .build();
 
-        // 2. Convertimos el Modelo de Dominio de Lote a Entidad JPA
+        ProductoEntity productoGuardado = productoRepository.save(productoEntity);
+
         LoteEntity loteEntity = LoteEntity.builder()
                 .id(lote.getId())
                 .codigoLote(lote.getCodigoLote())
                 .cantidad(lote.getCantidad())
                 .precioVenta(lote.getPrecioVenta())
-                .fechaVencimiento(lote.getFechaVencimiento())
-                .sucursal(lote.getSucursal().name())
+                .javaFechaVencimiento(lote.getFechaVencimiento())
+                .sucursal(sucursalEntity)
                 .usuarioRegistro(lote.getUsuarioRegistro())
-                .producto(productoEntity)
+                .producto(productoGuardado)
+                .ubicacionAnaquel(lote.getUbicacionAnaquel())
                 .build();
 
         LoteEntity guardado = repository.save(loteEntity);
-
-        // 3. Traducimos el resultado guardado de regreso al formato del Dominio Puro
         return mapearAFormatoDominio(guardado);
     }
 
     @Override
-    public List<Lote> buscarPorSucursalYCategoria(Sucursal sucursal, Categoria categoria) {
-        return repository.findBySucursalAndProducto_Categoria(sucursal.name(), categoria.name())
-                .stream()
-                .map(this::mapearAFormatoDominio)
-                .collect(Collectors.toList());
+    public List<Lote> buscarPorSucursalYCategoria(String sucursal, String categoria) {
+        return repository.findBySucursal_NombreSucursalAndProducto_Categoria_NombreCategoria(sucursal, categoria)
+                .stream().map(this::maFormatoDominio).collect(Collectors.toList());
     }
 
     @Override
-    public List<Lote> buscarProximosAVencer(Sucursal sucursal, LocalDate fechaLimite) {
-        return repository.findBySucursalAndFechaVencimientoLessThanEqual(sucursal.name(), fechaLimite)
-                .stream()
-                .map(this::mapearAFormatoDominio)
-                .collect(Collectors.toList());
+    public List<Lote> buscarProximosAVencer(String sucursal, LocalDate fechaLimite) {
+        return repository.findBySucursal_NombreSucursalAndJavaFechaVencimientoLessThanEqual(sucursal, fechaLimite)
+                .stream().map(this::maFormatoDominio).collect(Collectors.toList());
     }
 
     @Override
-    public List<Lote> buscarStockBajo(Sucursal sucursal) {
-        return repository.findStockBajo(sucursal.name())
-                .stream()
-                .map(this::mapearAFormatoDominio)
-                .collect(Collectors.toList());
+    public List<Lote> buscarStockBajo(String sucursal) {
+        return repository.findStockBajo(sucursal)
+                .stream().map(this::maFormatoDominio).collect(Collectors.toList());
     }
 
-    // Método auxiliar reutilizable para convertir de Entidad JPA hacia Dominio Puro
+    private Lote maFormatoDominio(LoteEntity entity) {
+        return mapearAFormatoDominio(entity);
+    }
+
     private Lote mapearAFormatoDominio(LoteEntity entity) {
-        // ACTUALIZADO: Construimos el objeto Producto con sus 11 parámetros correspondientes
-        Producto productoDominio = new Producto(
-                entity.getProducto().getId(),
-                entity.getProducto().getNombre(),
-                Categoria.valueOf(entity.getProducto().getCategoria()),
-                entity.getProducto().getFormaFarmaceutica(),
-                entity.getProducto().getPresentacion(),
-                entity.getProducto().getUnidadInventario(),
-                entity.getProducto().getUnidadStock(),
-                entity.getProducto().getStockMinimo(),
-                entity.getProducto().isFiscalizadoDigemid(),
-                entity.getProducto().getRegistroSanitario(),
-                entity.getProducto().getCodigoMedicamento() // <-- NUEVO: Recupera el código institucional desde MySQL
+        Categoria categoriaDominio = new Categoria(
+                entity.getProducto().getCategoria().getId(),
+                entity.getProducto().getCategoria().getNombreCategoria()
         );
+
+        Sucursal sucursalDominio = new Sucursal(
+                entity.getSucursal().getId(),
+                entity.getSucursal().getNombreSucursal()
+        );
+
+        Producto productoDominio = Producto.builder()
+                .id(entity.getProducto().getId())
+                .nombre(entity.getProducto().getNombre())
+                .categoria(categoriaDominio)
+                .formaFarmaceutica(entity.getProducto().getFormaFarmaceutica())
+                .presentacion(entity.getProducto().getPresentacion())
+                .unidadInventario(entity.getProducto().getUnidadInventario())
+                .unidadStock(entity.getProducto().getUnidadStock())
+                .stockMinimo(entity.getProducto().getStockMinimo())
+                .fiscalizadoDigemid(entity.getProducto().isFiscalizadoDigemid())
+                .registroSanitario(entity.getProducto().getRegistroSanitario())
+                .codigoMedicamento(entity.getProducto().getCodigoMedicamento())
+                .build();
 
         return new Lote(
                 entity.getId(),
+                productoDominio,
                 entity.getCodigoLote(),
                 entity.getCantidad(),
                 entity.getPrecioVenta(),
-                entity.getFechaVencimiento(),
-                Sucursal.valueOf(entity.getSucursal()),
-                productoDominio,
+                entity.getJavaFechaVencimiento(),
+                sucursalDominio,
+                entity.getUbicacionAnaquel(),
                 entity.getUsuarioRegistro()
         );
     }

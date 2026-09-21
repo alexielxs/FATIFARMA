@@ -7,5 +7,4 @@ import java.util.Optional;
 public interface VentasOutputPort {
     Venta guardarVenta(Venta venta);
     Optional<Venta> buscarPorId(Long idVenta);
-
 }

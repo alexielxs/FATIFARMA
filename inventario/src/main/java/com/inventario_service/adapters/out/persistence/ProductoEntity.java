@@ -1,7 +1,10 @@
 package com.inventario_service.adapters.out.persistence;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "productos")
@@ -10,29 +13,29 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ProductoEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String nombre;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "categoria_id", nullable = false)
+    private CategoriaEntity categoria;
 
     @Column(nullable = false)
-    private String categoria; // Guardado como String (MEDICAMENTOS, CUIDADO_PERSONAL, etc.)
+    private String nombre;
 
     @Column(name = "forma_farmaceutica")
     private String formaFarmaceutica;
 
     private String presentacion;
 
-    @Column(name = "unidad_inventario")
+    @Column(name = "unidad_inventario", nullable = false)
     private String unidadInventario;
 
-    @Column(name = "unidad_stock")
+    @Column(name = "unidad_stock", nullable = false)
     private String unidadStock;
 
-    @Column(name = "stock_minimo")
+    @Column(name = "stock_minimo", nullable = false)
     private Integer stockMinimo;
 
     @Column(name = "fiscalizado_digemid", nullable = false)
@@ -41,6 +44,6 @@ public class ProductoEntity {
     @Column(name = "registro_sanitario")
     private String registroSanitario;
 
-    @Column(name = "codigo_medicamento")
-    private String codigoMedicamento; // <-- NUEVO EN BASE DE DATOS: Código de catálogo de la receta (Ej: 010400091)
+    @Column(name = "codigo_medicamento", unique = true)
+    private String codigoMedicamento;
 }

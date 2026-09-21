@@ -1,7 +1,6 @@
 package com.farmacia.seguridad.adapters.in.web;
 
 import com.farmacia.seguridad.domain.model.Usuario;
-import com.farmacia.seguridad.domain.model.Rol;
 import com.farmacia.seguridad.domain.service.AuthUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,36 +24,25 @@ public class AuthController {
             String confirmarPassword = request.get("confirmarPassword");
             String rolInput = request.get("rol");
 
-            // 1. VALIDACIÓN: Verificar que las contraseñas coincidan
             if (password == null || !password.equals(confirmarPassword)) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Las contraseñas ingresadas no coinciden."));
             }
 
-            // 2. VALIDACIÓN: Asegurar que el usuario haya seleccionado un rol obligatorio
             if (rolInput == null || rolInput.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Debe seleccionar obligatoriamente un rol para el usuario."));
             }
 
-            // Construir el usuario con el rol dinámico seleccionado (Se eliminó la duplicación de rolInput)
-            Usuario nuevoUsuario = new Usuario(
-                    null,
-                    request.get("nombre"),
-                    request.get("email"),
-                    password,
-                    Rol.valueOf(rolInput.toUpperCase().trim()) // Convierte a Enum sin importar espacios o minúsculas
-            );
+            Usuario nuevoUsuario = new Usuario(null, request.get("nombre"), request.get("email"), password, null);
 
-            Usuario guardado = authUseCase.registrar(nuevoUsuario);
+            Usuario guardado = authUseCase.registrarUsuario(nuevoUsuario, rolInput);
+
             return ResponseEntity.ok(Map.of(
-                    "mensaje", "Usuario registrado con éxito",
+                    "mensaje", "Usuario registrado con éxito en SIGIFARM",
                     "id", guardado.getId(),
                     "nombre", guardado.getNombre(),
                     "email", guardado.getEmail(),
-                    "rol", guardado.getRol().name()
+                    "rol", guardado.getRol() != null ? guardado.getRol().getNombreRol() : rolInput.toUpperCase().trim()
             ));
-        } catch (IllegalArgumentException e) {
-            // Actualizado con tus roles reales de la farmacia
-            return ResponseEntity.badRequest().body(Map.of("error", "El rol seleccionado no es válido. Elija entre PROPIETARIO, FARMACEUTICO o TECNICA."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -63,11 +51,25 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         try {
-            String token = authUseCase.login(request.get("email"), request.get("password"));
-            // Devolvemos la llave digital de acceso JWT a la web
+            String token = authUseCase.autenticarUsuario(request.get("email"), request.get("password"));
             return ResponseEntity.ok(Map.of("token", token));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/recuperar")
+    public ResponseEntity<?> recuperarContrasena(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Debe ingresar un correo electrónico válido."));
+            }
+
+            Map<String, Object> resultado = authUseCase.solicitarRecuperacionClave(email);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }
