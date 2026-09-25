@@ -57,10 +57,20 @@ public class VentasUseCase implements VentasInputPort {
         // =========================================================================
         if (requiereControlDigemid) {
             venta.setTipoVenta("CON_RECETA"); // <-- OBLIGATORIO: No se modifica
-            // Si suben la receta de inmediato en caja, validamos que esté vigente
+
+            // Si suben la receta de inmediato en caja, aplicamos la validación adaptativa de vigencia
             if (venta.getReceta() != null && venta.getReceta().getNumeroReceta() != null) {
-                if (venta.getReceta().getFechaVigencia().isBefore(LocalDate.now())) {
-                    throw new RuntimeException("VENTA RECHAZADA: La receta médica ingresada ya se encuentra vencida.");
+                RecetaMedica receta = venta.getReceta();
+
+                // Inyectamos la auditoría del sistema al momento del registro
+                receta.setFechaRegistroSistema(LocalDateTime.now());
+
+                // VALIDACIÓN ADAPTATIVA: Solo valida si la receta posee una fecha de vigencia (Institucionales)
+                // Si es null (como en la receta del odontólogo), se ignora el bloqueo
+                if (receta.getFechaVigencia() != null) {
+                    if (receta.getFechaVigencia().isBefore(LocalDate.now())) {
+                        throw new RuntimeException("VENTA RECHAZADA: La receta médica ingresada ya se encuentra vencida.");
+                    }
                 }
             }
         } else {
@@ -87,8 +97,12 @@ public class VentasUseCase implements VentasInputPort {
             throw new RuntimeException("Error: Esta venta ya cuenta con una receta archivada en el folder digital.");
         }
 
-        if (receta.getFechaVigencia().isBefore(ventaExistente.getFechaVenta().toLocalDate())) {
-            throw new RuntimeException("Error Sanitario: La receta fotocopiada ya estaba vencida el día de la venta.");
+        // VALIDACIÓN ADAPTATIVA PARA ARCHIVADO DIFERIDO:
+        // Solo valida la vigencia contra el día histórico de la transacción si la fecha de vigencia no es nula.
+        if (receta.getFechaVigencia() != null) {
+            if (receta.getFechaVigencia().isBefore(ventaExistente.getFechaVenta().toLocalDate())) {
+                throw new RuntimeException("Error Sanitario: La receta fotocopiada ya estaba vencida el día de la venta.");
+            }
         }
 
         // =====================================================================

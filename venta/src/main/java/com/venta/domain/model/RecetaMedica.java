@@ -15,8 +15,8 @@ public class RecetaMedica {
     private String colegiaturaColegioMedico;
     private String registroEspecialista;
     private LocalDate fechaEmision;
-    private LocalDate fechaVigencia;
-    private String dniCliente;
-    private String imagenBase64;
+    private LocalDate fechaVigencia; // Permite null para recetas como las del odontólogo
+    private String dniCliente; // Opcional según el diseño de tu flujo
+    private String imagenBase64; // Almacena la foto o PDF digitalizado de la receta
     private LocalDateTime fechaRegistroSistema; // <-- NUEVO: Registra la hora exacta en que se sube el PDF/Foto
 }

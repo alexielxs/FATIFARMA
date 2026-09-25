@@ -10,13 +10,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component; // <-- NUEVO IMPORT OBLIGATORIO
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+@Component // <-- AGREGADO: Permite que Spring lo administre e inyecte en SecurityConfig
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    // Nota de Sustentación: Esta clave debe tener al menos 256 bits (32 caracteres) para el algoritmo HS256
     private static final String SECRET_KEY_STRING = "ClaveSecretaSuperFuerteYSeguraParaLaFarmacia2026!";
 
     @Override
@@ -44,18 +47,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String rol = claims.get("rol", String.class); // Extraemos el rol dinámico
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Spring Security exige el prefijo "ROLE_" para validar accesos por rol
+                // Solución al problema de acoplamiento: Spring Security exige el prefijo "ROLE_"
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + rol.toUpperCase());
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         email, null, List.of(authority)
                 );
 
-                // Guardamos el usuario autenticado en el contexto de Spring
+                // Guardamos el usuario autenticado en el contexto de Spring perimetral
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            // Si el token expiró o es alterado, no se autentica
+            // Si el token expiró, fue alterado o es inválido, limpiamos el contexto para denegar el paso
             SecurityContextHolder.clearContext();
         }
 

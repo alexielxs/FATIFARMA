@@ -23,7 +23,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
     public Venta guardarVenta(Venta venta) {
         RecetaMedicaEmbeddable recetaEmbeddable = null;
         if (venta.getReceta() != null) {
-            // CORREGIDO: Mapea de forma física la nueva fecha de auditoría del sistema hacia Hibernate
+            // Se utiliza el patrón Builder actualizado de RecetaMedicaEmbeddable
             recetaEmbeddable = RecetaMedicaEmbeddable.builder()
                     .numeroReceta(venta.getReceta().getNumeroReceta())
                     .medicoNombre(venta.getReceta().getMedicoNombre())
@@ -33,7 +33,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                     .fechaVigencia(venta.getReceta().getFechaVigencia())
                     .dniCliente(venta.getReceta().getDniCliente())
                     .imagenBase64(venta.getReceta().getImagenBase64())
-                    .fechaRegistroSistema(venta.getReceta().getFechaRegistroSistema()) // <-- ASIGNACIÓN DE AUDITORÍA
+                    .fechaRegistroSistema(venta.getReceta().getFechaRegistroSistema()) // <-- PERSISTENCIA DE LA AUDITORÍA
                     .build();
         }
 
@@ -59,7 +59,9 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                         .build())
                 .collect(Collectors.toList());
 
-        ventaEntity.setDetalles(detalleEntities);
+        // Usamos el helper method que añadimos en tu VentaEntity para asegurar la relación bidireccional limpia
+        ventaEntity.asignarDetalles(detalleEntities);
+
         VentaEntity guardada = repository.save(ventaEntity);
         return mapearADominio(guardada);
     }
@@ -72,7 +74,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
     private Venta mapearADominio(VentaEntity entity) {
         RecetaMedica recetaDominio = null;
         if (entity.getReceta() != null) {
-            // CORREGIDO: Se añade el noveno parámetro al constructor para jalar la fecha de auditoría de la BD
+            // El constructor de tu dominio puro RecetaMedica recupera los 9 campos de auditoría inmutable
             recetaDominio = new RecetaMedica(
                     entity.getReceta().getNumeroReceta(),
                     entity.getReceta().getMedicoNombre(),
@@ -82,7 +84,7 @@ public class MySQLVentasAdapter implements VentasOutputPort {
                     entity.getReceta().getFechaVigencia(),
                     entity.getReceta().getDniCliente(),
                     entity.getReceta().getImagenBase64(),
-                    entity.getReceta().getFechaRegistroSistema() // <-- RECUPERACIÓN DE AUDITORÍA INMUTABLE
+                    entity.getReceta().getFechaRegistroSistema() // <-- RECUPERACIÓN DE LA AUDITORÍA DESDE LA BD
             );
         }
 

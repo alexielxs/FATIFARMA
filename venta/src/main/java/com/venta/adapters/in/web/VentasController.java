@@ -3,7 +3,7 @@ package com.venta.adapters.in.web;
 import com.venta.domain.model.Venta;
 import com.venta.domain.model.DetalleVenta;
 import com.venta.domain.model.RecetaMedica;
-import com.venta.domain.service.VentasUseCase;
+import com.venta.ports.in.VentasInputPort; // <-- CORREGIDO: Inyección por Puerto de Entrada
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/ventas")
 public class VentasController {
 
-    private final VentasUseCase ventasUseCase;
+    private final VentasInputPort ventasInputPort; // <-- CORREGIDO: Desacoplado a Interfaz
 
-    public VentasController(VentasUseCase ventasUseCase) {
-        this.ventasUseCase = ventasUseCase;
+    public VentasController(VentasInputPort ventasInputPort) {
+        this.ventasInputPort = ventasInputPort;
     }
 
     // =========================================================================
@@ -50,14 +50,17 @@ public class VentasController {
             if (request.containsKey("receta") && request.get("receta") != null) {
                 Map<String, Object> recMap = (Map<String, Object>) request.get("receta");
 
-                // CORREGIDO: Se añade 'null' al final para mapear el nuevo atributo fechaRegistroSistema
+                // ADAPTACIÓN DE VIGENCIA NULLABLE: Evita fallos si no viene el campo (Recetas Particulares)
+                LocalDate emision = recMap.get("fechaEmision") != null ? LocalDate.parse((String) recMap.get("fechaEmision")) : null;
+                LocalDate vigencia = recMap.get("fechaVigencia") != null ? LocalDate.parse((String) recMap.get("fechaVigencia")) : null;
+
                 recetaDirecta = new RecetaMedica(
                         (String) recMap.get("numeroReceta"),
                         (String) recMap.get("medicoNombre"),
                         (String) recMap.get("colegiaturaColegioMedico"),
                         (String) recMap.get("registroEspecialista"),
-                        LocalDate.parse((String) recMap.get("fechaEmision")),
-                        LocalDate.parse((String) recMap.get("fechaVigencia")),
+                        emision,
+                        vigencia,
                         (String) recMap.get("dniCliente"),
                         (String) recMap.get("imagenBase64"),
                         null // <-- La fecha de auditoría del sistema nace en vacío al cobrar
@@ -82,7 +85,7 @@ public class VentasController {
                     .receta(recetaDirecta)
                     .build();
 
-            Venta procesada = ventasUseCase.procesarVenta(venta);
+            Venta procesada = ventasInputPort.procesarVenta(venta); // <-- LLAMADA AL PUERTO
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Transacción grabada correctamente en la caja registradora",
                     "id_venta", procesada.getId(),
@@ -107,20 +110,23 @@ public class VentasController {
                 throw new RuntimeException("Error: Datos de la receta fotocopiada ausentes.");
             }
 
-            // Mapeamos el bloque completo de la fotocopia (CORREGIDO: se añade 'null' inicial para la auditoría)
+            // ADAPTACIÓN DE VIGENCIA NULLABLE EN ATADO DIFERIDO
+            LocalDate emision = recMap.get("fechaEmision") != null ? LocalDate.parse((String) recMap.get("fechaEmision")) : null;
+            LocalDate vigencia = recMap.get("fechaVigencia") != null ? LocalDate.parse((String) recMap.get("fechaVigencia")) : null;
+
             RecetaMedica recetaFotocopiada = new RecetaMedica(
                     (String) recMap.get("numeroReceta"),
                     (String) recMap.get("medicoNombre"),
                     (String) recMap.get("colegiaturaColegioMedico"),
                     (String) recMap.get("registroEspecialista"),
-                    LocalDate.parse((String) recMap.get("fechaEmision")),
-                    LocalDate.parse((String) recMap.get("fechaVigencia")),
+                    emision,
+                    vigencia,
                     (String) recMap.get("dniCliente"),
                     (String) recMap.get("imagenBase64"),
                     null // <-- Nace en null; el caso de uso le estampará el LocalDateTime.now() inmutable
             );
 
-            Venta ventaActualizada = ventasUseCase.adjuntarRecetaAVentaRealizada(idVenta, recetaFotocopiada);
+            Venta ventaActualizada = ventasInputPort.adjuntarRecetaAVentaRealizada(idVenta, recetaFotocopiada); // <-- LLAMADA AL PUERTO
 
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Receta fotocopiada archivada correctamente en la boleta N° " + idVenta,

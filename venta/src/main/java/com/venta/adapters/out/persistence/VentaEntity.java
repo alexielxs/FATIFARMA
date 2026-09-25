@@ -48,4 +48,13 @@ public class VentaEntity {
 
     @Embedded
     private RecetaMedicaEmbeddable receta; // Folder digital embebido de auditoría (DIGEMID)
+
+    // Helper method para asegurar que al asignar los detalles en el Mapper,
+    // cada detalle apunte correctamente a esta Venta antes de persistir en MySQL.
+    public void asignarDetalles(List<DetalleVentaEntity> nuevosDetalles) {
+        this.detalles = nuevosDetalles;
+        if (nuevosDetalles != null) {
+            nuevosDetalles.forEach(detalle -> detalle.setVenta(this));
+        }
+    }
 }

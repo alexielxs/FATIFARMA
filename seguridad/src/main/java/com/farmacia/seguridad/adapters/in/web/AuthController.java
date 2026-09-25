@@ -1,7 +1,7 @@
 package com.farmacia.seguridad.adapters.in.web;
 
 import com.farmacia.seguridad.domain.model.Usuario;
-import com.farmacia.seguridad.domain.service.AuthUseCase;
+import com.farmacia.seguridad.ports.in.SeguridadInputPort; // <-- CORREGIDO: Importación del Puerto de Entrada
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -11,12 +11,15 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthUseCase authUseCase;
+    private final SeguridadInputPort seguridadInputPort; // <-- CORREGIDO: Inyección desacoplada al Puerto
 
-    public AuthController(AuthUseCase authUseCase) {
-        this.authUseCase = authUseCase;
+    public AuthController(SeguridadInputPort seguridadInputPort) {
+        this.seguridadInputPort = seguridadInputPort;
     }
 
+    // =========================================================================
+    // REGISTRO DE USUARIOS POR ROL (Sincronizado con Postman)
+    // =========================================================================
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody Map<String, String> request) {
         try {
@@ -34,7 +37,8 @@ public class AuthController {
 
             Usuario nuevoUsuario = new Usuario(null, request.get("nombre"), request.get("email"), password, null);
 
-            Usuario guardado = authUseCase.registrarUsuario(nuevoUsuario, rolInput);
+            // Llamada a través del puerto de entrada
+            Usuario guardado = seguridadInputPort.registrarUsuario(nuevoUsuario, rolInput);
 
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Usuario registrado con éxito en SIGIFARM",
@@ -48,16 +52,23 @@ public class AuthController {
         }
     }
 
+    // =========================================================================
+    // INICIO DE SESIÓN (HU02 - Generación del Bearer Token)
+    // =========================================================================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         try {
-            String token = authUseCase.autenticarUsuario(request.get("email"), request.get("password"));
+            // Llamada a través del puerto de entrada
+            String token = seguridadInputPort.autenticarUsuario(request.get("email"), request.get("password"));
             return ResponseEntity.ok(Map.of("token", token));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
     }
 
+    // =========================================================================
+    // SOLICITUD DE RECUPERACIÓN DE CREDENCIALES (Trazabilidad)
+    // =========================================================================
     @PostMapping("/recuperar")
     public ResponseEntity<?> recuperarContrasena(@RequestBody Map<String, String> request) {
         try {
@@ -66,7 +77,8 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Debe ingresar un correo electrónico válido."));
             }
 
-            Map<String, Object> resultado = authUseCase.solicitarRecuperacionClave(email);
+            // Llamada a través del puerto de entrada
+            Map<String, Object> resultado = seguridadInputPort.solicitarRecuperacionClave(email);
             return ResponseEntity.ok(resultado);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

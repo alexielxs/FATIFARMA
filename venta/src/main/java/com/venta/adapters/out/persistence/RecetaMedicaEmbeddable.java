@@ -27,16 +27,16 @@ public class RecetaMedicaEmbeddable {
     @Column(name = "medico_colegiatura")
     private String colegiaturaColegioMedico;
 
-    @Column(name = "medico_rne")
+    @Column(name = "medico_rne", nullable = true) // <-- Nullable si el médico no es especialista
     private String registroEspecialista;
 
     @Column(name = "receta_fecha_emision")
     private LocalDate fechaEmision;
 
-    @Column(name = "receta_fecha_vigencia")
+    @Column(name = "receta_fecha_vigencia", nullable = true) // <-- Nullable para recetas sin vigencia (Dentistas)
     private LocalDate fechaVigencia;
 
-    @Column(name = "cliente_dni")
+    @Column(name = "cliente_dni", nullable = true) // <-- Nullable de acuerdo al diseño libre de tu grupo
     private String dniCliente;
 
     @Lob

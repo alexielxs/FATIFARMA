@@ -2,12 +2,12 @@ package com.farmacia.seguridad.adapters.out.persistence;
 
 import com.farmacia.seguridad.domain.model.Usuario;
 import com.farmacia.seguridad.domain.model.Rol;
-import com.farmacia.seguridad.ports.out.UsuarioOutPutPort;
+import com.farmacia.seguridad.ports.out.UsuarioOutputPort;
 import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 @Component
-public class MySQLUsuarioAdapter implements UsuarioOutPutPort {
+public class MySQLUsuarioAdapter implements UsuarioOutputPort {
 
     private final SpringDataUsuarioRepository usuarioRepository;
     private final SpringDataRolRepository rolRepository;
@@ -45,8 +45,22 @@ public class MySQLUsuarioAdapter implements UsuarioOutPutPort {
                 .map(entity -> new Rol(entity.getId(), entity.getNombreRol()));
     }
 
+    // =========================================================================
+    // IMPLEMENTACIÓN DEL PUERTO PARA EL CANDADO CONTRA EL FRAUDE DE ROLES
+    // =========================================================================
+    @Override
+    public Optional<Usuario> buscarPorNombre(String nombre) {
+        // Busca en la base de datos relacional y realiza el mapeo seguro al dominio
+        return usuarioRepository.findByNombre(nombre).map(this::mapearADominio);
+    }
+
     private Usuario mapearADominio(UsuarioEntity entity) {
-        Rol rolDominio = new Rol(entity.getRol().getId(), entity.getRol().getNombreRol());
+        if (entity == null) return null;
+
+        Rol rolDominio = entity.getRol() != null
+                ? new Rol(entity.getRol().getId(), entity.getRol().getNombreRol())
+                : null;
+
         return Usuario.builder()
                 .id(entity.getId())
                 .nombre(entity.getNombre())

@@ -1,6 +1,6 @@
 package com.farmacia.seguridad.adapters.out.security;
 
-import com.farmacia.seguridad.domain.model.Usuario; // <-- SOLUCIONADO: Importación obligatoria del modelo de dominio
+import com.farmacia.seguridad.domain.model.Usuario; // <-- Importación del modelo de dominio
 import com.farmacia.seguridad.ports.out.TokenOutputPort;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -23,9 +23,11 @@ public class JwtTokenAdapter implements TokenOutputPort {
 
     @Override
     public String generarToken(Usuario usuario) {
-        // CORREGIDO: Se cambia .name() por .getNombreRol() porque Rol ahora es una clase pura del diagrama relacional
+        // Si el rol o su nombre es nulo, viaja como null en los claims sin forzar ninguna cadena por defecto.
+        String nombreRolStr = (usuario.getRol() != null) ? usuario.getRol().getNombreRol() : null;
+
         Map<String, Object> extraClaims = Map.of(
-                "rol", usuario.getRol() != null ? usuario.getRol().getNombreRol() : "TECNICA",
+                "rol", nombreRolStr != null ? nombreRolStr.toUpperCase().trim() : "",
                 "id_usuario", usuario.getId()
         );
 

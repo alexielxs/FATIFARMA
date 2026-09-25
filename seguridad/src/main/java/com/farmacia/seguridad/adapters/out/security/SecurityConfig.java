@@ -13,6 +13,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // Inyección de dependencias correcta para el filtro perimetral
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -21,26 +28,28 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. RUTAS PÚBLICAS: Cualquiera puede loguearse o registrarse
+                        // 1. RUTAS PÚBLICAS: Acceso libre al servicio de autenticación
                         .requestMatchers("/api/auth/login", "/api/auth/registrar").permitAll()
 
-                        // 2. MÓDULO DE INVENTARIO 
-                        .requestMatchers("/api/inventario/consultar/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO", "TECNICA")
-                        .requestMatchers("/api/inventario/modificar/**", "/api/inventario/lotes/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO")
+                        // 2. MÓDULO DE INVENTARIO (Sincronizado con tus roles fijos)
+                        .requestMatchers("/api/inventario/consultar/**").hasAnyRole("PROPIETARIA", "FARMACEUTICA", "TECNICA")
+                        .requestMatchers("/api/inventario/modificar/**", "/api/inventario/lotes/**").hasAnyRole("PROPIETARIA", "FARMACEUTICA")
 
-                        // 3. MÓDULO DE VENTAS 
-                        .requestMatchers("/api/ventas/crear/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO", "TECNICA")
-                        .requestMatchers("/api/ventas/auditar/**").hasRole("PROPIETARIO")
+                        // 3. MÓDULO DE VENTAS (Mapeado exactamente a tus endpoints reales de VentasController)
+                        // Cobrar en caja (Momento 1): Acceso para todas
+                        .requestMatchers("/api/ventas/procesar").hasAnyRole("PROPIETARIA", "TECNICA")
+                        // Adjuntar / Asociar receta posterior (Momento 2): Solo autorizadas por Digemid
+                        .requestMatchers("/api/ventas/asociar-receta/**").hasAnyRole("PROPIETARIA", "TECNICA")
 
-                        // 4. MÓDULO DE REPORTES 
-                        .requestMatchers("/api/reportes/financieros/**").hasRole("PROPIETARIO")
-                        .requestMatchers("/api/reportes/diarios/**").hasAnyRole("PROPIETARIO", "FARMACEUTICO")
+                        // 4. MÓDULO DE REPORTES Y ALERTAS (Exclusividades de control superior)
+                        .requestMatchers("/api/reportes/financieros/**").hasRole("PROPIETARIA")
+                        .requestMatchers("/api/reportes/diarios/**").hasAnyRole("PROPIETARIA", "FARMACEUTICA")
 
-                        // 5. CUALQUIER OTRA RUTA: Requiere que el usuario esté logueado
+                        // 5. CUALQUIER OTRA RUTA: Candado de seguridad por defecto
                         .anyRequest().authenticated()
                 )
-                // Inyectamos nuestro filtro de JWT antes del filtro de autenticación por defecto de Spring
-                .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                // Inyectamos el filtro de JWT configurado de forma correcta
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
